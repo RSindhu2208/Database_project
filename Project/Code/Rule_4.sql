@@ -1,0 +1,55 @@
+-- creating a view joining stock, employee, portfolio manager and transctions table to get the potential insider trader for a "Buy" transaction
+create view rule4 as 
+select t1.pmID, e.firstName, e.lastName, t1.stockSymbol, s.companyName, t1.transactionDate, s.weekPercentMove
+from transactions t1 
+join stock s 
+on t1.stockSymbol = s.stockSymbol
+JOIN portfolioManager m
+on t1.pmID = m.pmID
+JOIN employee e
+on e.empID = m.empID
+JOIN transactionType t2
+on t2.typeID = t1.typeID
+WHERE t2.transactionName = "Buy"
+AND t1.transactionDate <= CURDATE() and t1.transactionDate >= date_add(CURDATE(), INTERVAL -15 DAY);
+
+
+
+-- PROCEDURE: If a "buy" transaction type was executed within 15 days of a subsequent 20% stock price move upward over 7-days, then generate a case for analysis.
+DELIMITER //
+DROP procedure if exists rule4_procedure;
+DROP Table if exists rule4Table;
+CREATE PROCEDURE rule4_procedure()
+BEGIN
+   DECLARE j INT;
+   SET j = 0;
+   select count(*) into @length1 from rule4;
+    WHILE j < @length1 DO
+        create table if not exists rule4Table select pmID, firstName, lastName, stockSymbol, companyName, weekPercentMove from rule4 where transactionDate <= CURDATE() and transactionDate >= DATE_ADD(CURDATE(), INTERVAL -15 DAY) and weekPercentMove > 20;
+        insert into rule4Table select pmID, firstName, lastName, stockSymbol, companyName, weekPercentMove from rule4 where transactionDate <= CURDATE() and transactionDate >= DATE_ADD(CURDATE(), INTERVAL -15 DAY) and weekPercentMove > 20;
+        SET j = j + 1;
+    END WHILE;
+select DISTINCT pmID, firstName, lastName, stockSymbol, companyName, weekPercentMove from rule4Table;
+call rule4_cases();
+END//
+DELIMITER ;
+
+
+--  Adding values to the cases table to record insider trading cases
+DELIMITER //
+drop procedure if exists rule4_cases;
+create procedure rule4_cases()
+BEGIN
+  DECLARE k INT;
+  SET k = 0;
+  select count(*) into @length from rule4Table;
+	WHILE (k < @length) DO
+		insert into cases (caseDate, pmID, ruleID) values (curdate(), (select pmID from rule4Table LIMIT k,1) , 4);
+        SET k = k + 1;
+	END WHILE;
+END//
+DELIMITER ; 
+
+
+-- Calling Rule 4
+CALL rule4_procedure();

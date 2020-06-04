@@ -1,0 +1,15 @@
+Written report ** (70% of the project grade)
+
+Appendix
+problem statement
+impact of the application
+existing solutions
+Unique Selling point of project
+Implementation (Structure, organization, etc)
+Description of the implementation (Ex. Why did you use 5 triggers?)
+Did the analysis work?
+What went wrong.
+What could have done better? - Issues
+
+
+                  
